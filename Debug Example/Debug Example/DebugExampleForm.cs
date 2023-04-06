@@ -18,6 +18,7 @@ namespace Debug_Example
         private void SetupListBoxTraceListener()
         {
             ListBoxTraceListener listener = new ListBoxTraceListener(lbDebug);
+            Debug.Listeners.Add(new TextWriterTraceListener("Log.txt"));
             Debug.Listeners.Add(listener);
             Debug.WriteLine("Textbox has been added to listeners");
         }
