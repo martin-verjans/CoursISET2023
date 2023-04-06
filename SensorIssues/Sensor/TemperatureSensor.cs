@@ -2,7 +2,7 @@
 
 namespace Sensor
 {
-    public interface TemperatureSensor
+    public interface TemperatureSensor : IDisposable
     {
         int GetSensorId();
         double GetCurrentTemperature();

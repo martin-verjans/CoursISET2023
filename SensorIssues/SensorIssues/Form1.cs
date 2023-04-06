@@ -1,48 +1,106 @@
 ﻿using Sensor;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Windows.Forms;
 
 namespace SensorIssues
 {
     public partial class Form1 : Form
     {
-        TemperatureSensor sensor1, sensor2, sensor3;
         public Form1()
         {
             InitializeComponent();
-            sensor1 = SensorFactory.CreateSensor();
-            sensor1.SensorUpdated += Sensor_SensorUpdated;
-            lblSensor1.Tag = sensor1.GetSensorId();
-            sensor2 = SensorFactory.CreateSensor();
-            sensor2.SensorUpdated += Sensor_SensorUpdated;
-            lblSensor1.Tag = sensor2.GetSensorId();
-            sensor3 = SensorFactory.CreateSensor();
-            sensor3.SensorUpdated += Sensor_SensorUpdated;
-            lblSensor3.Tag = sensor3.GetSensorId();
+            InitSensors();
+        }
+
+        private void InitSensors()
+        {
+            CreateSensor(lblSensor1);
+            CreateSensor(lblSensor2);
+            CreateSensor(lblSensor3);
+        }
+
+        private void CreateSensor(Label attachToLabel)
+        {
+            TemperatureSensor sensor = SensorFactory.CreateSensor();
+            sensor.SensorUpdated += Sensor_SensorUpdated;
+            //We attach the sensor to the label so it doesn't get disposed
+            attachToLabel.Tag = sensor;
         }
 
         private void Sensor_SensorUpdated(object sender, double e)
         {
-            int id = ((TemperatureSensor)sender).GetSensorId();
-            if ((int)lblSensor1.Tag == id)
+            Invoke(new Action(() => TryUpdateSensorValue((TemperatureSensor)sender, e)));
+        }
+
+        private void TryUpdateSensorValue(object sensor, double newValue)
+        {
+            try
             {
-                lblSensor1.Text = "Sensor 1 : " + Math.Round(e, 1);
+                TemperatureSensor validSensor = ValidateObjectIsTemperatureSensor(sensor);
+                UpdateSensorValue(validSensor, newValue);
             }
-            else if ((int)lblSensor3.Tag == id)
+            catch (Exception ex)
             {
-                lblSensor2.Text = "Sensor 2 : " + Math.Round(e, 1);
+                DisplayException(ex);
             }
-            else if ((int)lblSensor2.Tag == id)
+        }
+
+        private TemperatureSensor ValidateObjectIsTemperatureSensor(object sensor)
+        {
+            if (sensor is null)
             {
-                lblSensor2.Text = "Sensor 3 : " + Math.Round(e, 1);
+                throw new Exception("sensor is null");
             }
+
+            if (!(sensor is TemperatureSensor))
+            {
+                throw new Exception($"Object received is not a TemperatureSensor (object is {sensor.GetType()}");
+            }
+
+            return (TemperatureSensor)sensor;
+        }
+
+        private void UpdateSensorValue(TemperatureSensor sensor, double newValue)
+        {
+            int id = sensor.GetSensorId();
+            Label toUpdate = FindLabelForSensorId(id);
+            UpdateSensorLabel(toUpdate, id, newValue);
+        }
+
+        private Label FindLabelForSensorId(int id)
+        {
+            switch (id)
+            {
+                case 1: return lblSensor1;
+                case 2: return lblSensor2;
+                case 3: return lblSensor3;
+                default: throw new Exception($"No label matches sensor Id {id}");
+            }
+        }
+
+        private void UpdateSensorLabel(Label toUpdate, int id, double newValue)
+        {
+            toUpdate.Text = $"Sensor {id} : {Math.Round(newValue, 1)}";
+        }
+        private static void DisplayException(Exception ex)
+        {
+            Debug.WriteLine($"Exception (Type {ex.GetType()}) : {ex.Message}");
+            Debug.WriteLine($"StackTrace :{Environment.NewLine}{ex.StackTrace}");
+            MessageBox.Show($"An exception occured : {ex.Message}", ex.GetType().ToString());
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            //We will dispose the sensors, so the threads don't keep running in background
+            DisposeSensor((TemperatureSensor)lblSensor1.Tag);
+            DisposeSensor((TemperatureSensor)lblSensor2.Tag);
+            DisposeSensor((TemperatureSensor)lblSensor3.Tag);
+        }
+
+        private void DisposeSensor(TemperatureSensor sensor)
+        {
+            sensor.Dispose();
         }
     }
 }
