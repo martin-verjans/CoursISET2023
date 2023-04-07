@@ -9,7 +9,7 @@ namespace Sensor
         private static int sensorCount = 0;
         private const double MIN = -500;
         private const double MAX = 500;
-        private const int FAILRATE = 999000;
+        private const int FAILRATE = 700000;
         private readonly Random random;
         private double temp = 0;
         private bool disposedValue;
